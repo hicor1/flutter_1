@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hicor_1/pages/bible_page.dart';
 import 'package:hicor_1/pages/home_page.dart';
 import 'package:hicor_1/pages/search_page.dart';
 import 'package:hicor_1/pages/my_page.dart';
-//import 'package:hicor_1/pages/bible_page.dart';
 
 class TabPage extends StatefulWidget {
   const TabPage({Key? key}) : super(key: key);
@@ -16,7 +16,7 @@ class _TabPageState extends State<TabPage> {
 
   List _pages = [
     HomePage(),
-    Text('Bible'),
+    BiblePage(),
     Text('Favorite'),
     MyPage(),
   ];
@@ -25,18 +25,27 @@ class _TabPageState extends State<TabPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(child: _pages[_selectedPageIndex],),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: _onItemTapped,
-        currentIndex: this._selectedPageIndex,
-        // main.dart에서 설정한 Theme에 영향을 받지 않게 하기위해 색설정
-        fixedColor: Colors.black,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.book_outlined), label: 'Bible'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_rounded), label:'Favorite'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label:'My'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color:Colors.white)],
+          border: BorderDirectional(top: BorderSide(color: Colors.grey, width: 0.3, style: BorderStyle.solid))
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed, // Fixed
+          backgroundColor: Colors.black, // <-- This works for fixed
+          unselectedItemColor: Colors.grey,
+          selectedItemColor: Colors.white,
+          onTap: _onItemTapped,
+          currentIndex: this._selectedPageIndex,
+
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
+            BottomNavigationBarItem(icon: Icon(Icons.book_outlined), label: '성경'),
+            BottomNavigationBarItem(icon: Icon(Icons.favorite_rounded), label:'Favorite'),
+            BottomNavigationBarItem(icon: Icon(Icons.account_circle), label:'더보기'),
+          ],
+        ),
       ),
     );
   }

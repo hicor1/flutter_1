@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:hicor_1/pages/root_page.dart';
+import 'package:get/get.dart';
 
 
 // (앱 기동)
@@ -22,13 +23,11 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
+      // 디버그 모드 해제
+      debugShowCheckedModeBanner: false,
       title: '연습중임둥',
-      theme: ThemeData(
-        primarySwatch: Colors.blueGrey,
-        primaryColor: Colors.white,
-        accentColor: pointcolor,
-      ),
+      theme: new ThemeData(scaffoldBackgroundColor: const Color(0x000000FF)),
       home: RootPage(),
     );
   }
