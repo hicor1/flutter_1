@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hicor_1/pages/bible_list_page.dart';
 
+//(성서이름이 담길공간, "상태저장"기능을 사용학 위해 전역변수로 선언
+String _SelectedBible = "창세기";
 
 class BiblePage extends StatefulWidget {
   const BiblePage({Key? key}) : super(key: key);
@@ -10,10 +12,13 @@ class BiblePage extends StatefulWidget {
   _BiblePageState createState() => _BiblePageState();
 }
 
-class _BiblePageState extends State<BiblePage> {
+class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixin {
 
-  //(성서 리스트 받아오기)
-  String _SelectedBible = "창세기";
+  // (상태저장)페이지 변환에도 상태가 변하지 않도록 설정
+  @override
+  bool get wantKeepAlive =>true;
+
+  //(다음페이지에서 선택된 성서이름 받아오기)
   void _getBible() async{
     var value =  await Get.to(BibleListPage());
     setState(() {
@@ -21,11 +26,11 @@ class _BiblePageState extends State<BiblePage> {
     });
   }
 
-
   @override
   //(초기화) 페이지 로딩과 동시에 초기화 진행
   void initState() {
     super.initState();
+    print("페이지 초기화 완료");
     //_getBible();
   }
   Widget build(BuildContext context) {
@@ -35,7 +40,7 @@ class _BiblePageState extends State<BiblePage> {
         //bottom: PreferredSize(preferredSize: Size.fromHeight(1), child: Container(color: Colors.grey, height: 0.3,)),
         centerTitle: true,
         title: Container(
-          width: 150,
+          width: 180,
           height:35,
           decoration: BoxDecoration(
             border: Border.all(width: 1, color: Colors.grey),
