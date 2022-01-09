@@ -28,16 +28,39 @@ class BibleRepository {
     );
   }
 
-  // 특정 성경가져오기
-  static Future<List<Map<String, dynamic>>> GetBiblesByDiv(String vcode, String Div) async {
+  // (장<chapter> 가져오기)
+  static Future<List<Map<String, dynamic>>> ChapterList(String vcode, int bcode) async {
     var db = await BibleDatabase.getDb();
-    print("Call GetBiblesByDiv");
     return db.query(
-        "Bibles",
-        columns: ["*"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
-        where: ' vcode =:vcode and type =:Div ',
-        whereArgs: [vcode, Div],
-        orderBy: "_id"
+        "verses",
+        columns: ["cnum"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+        distinct: true, // 중복제거
+        where: ' vcode =:vcode and bcode =:bcode', //' vcode ="GAE" and type like "%ld%" ',
+        whereArgs: [vcode, bcode],
+        orderBy: '_id asc'
+    );
+  }
+  // (절<verse> 가져오기)
+  static Future<List<Map<String, dynamic>>> VerseList(String vcode, int bcode, int cnum) async {
+    var db = await BibleDatabase.getDb();
+    return db.query(
+        "verses",
+        columns: ["vnum"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+        distinct: true,
+        where: ' vcode =:vcode and bcode =:bcode and cnum=:cnum', //' vcode ="GAE" and type like "%ld%" ',
+        whereArgs: [vcode, bcode, cnum],
+        orderBy: '_id asc'
+    );
+  }
+
+  // (내용<content> 가져오기)
+  static Future<List<Map<String, dynamic>>> GetContent(String vcode, int bcode, int cnum, int vnum) async {
+    var db = await BibleDatabase.getDb();
+    return db.query(
+        "verses",
+        columns: ["content"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+        where: ' vcode =:vcode and bcode =:bcode and cnum=:cnum and vnum=:vnum', //' vcode ="GAE" and type like "%ld%" ',
+        whereArgs: [vcode, bcode, cnum, vnum],
     );
   }
 

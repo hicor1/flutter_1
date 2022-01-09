@@ -24,15 +24,6 @@ class _BibleListPageState extends State<BibleListPage> {
     });
   }
 
-  //(함수) 특정 성서 리스트를 반환하는 함수
-  void _getBibles(String vcode, String Div) async {
-    final data = await BibleRepository.GetBiblesByDiv(vcode, Div);
-    setState(() {
-      _Bibles = data;
-      _isLoading = false;
-    });
-  }
-
   int _selectedPageIndex = 0;
 
   @override
@@ -63,8 +54,10 @@ class _BibleListPageState extends State<BibleListPage> {
             ],
           ),
         ),
-        body: Center(
-          child: BibleList(_selectedPageIndex),
+        body: Scrollbar(
+          child: Center(
+            child: BibleList(_selectedPageIndex),
+          ),
         ),
       ),
       //backgroundColor: Colors.white,
@@ -105,7 +98,7 @@ class _BibleListPageState extends State<BibleListPage> {
             child: ListView.builder(
               itemCount: Newlist.length,
               itemBuilder: (context, index) => TextButton(
-                onPressed: () {Get.back(result: Newlist[index]['name']);},
+                onPressed: () {Get.back(result: [Newlist[index]['bcode'], Newlist[index]['name']]);},
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
