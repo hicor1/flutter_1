@@ -141,7 +141,7 @@ class _BiblePartListPageState extends State<BiblePartListPage> {
               children: [
                 Container(
                   height: 40,
-                  color: Colors.black,
+                  color: Colors.transparent,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     crossAxisAlignment: CrossAxisAlignment.end,

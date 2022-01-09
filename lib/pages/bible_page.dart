@@ -11,9 +11,17 @@ String _SelectedBible   = "창세기"; // 성서이름
 int _SelectedBcode      = 1;     // 성서코드
 int _SelectedChapter    = 1; // '장' 번호
 int _SelectedVerse      = 1; // '절' 번호
-String Content          =''; //성경구절(content)
+int _SelectedId         = 1; // '아이디' 번호\
 bool _isLoadingContent  = true; //성경구절(content) 로딩 여부를 확인하는 변수
 
+//드랍다운메뉴정의
+final _Numberitems = ['1','2','3','4','5'];
+var _selectedNumber = '1';
+
+final _Bibleitems = ['GAE','NIV'];
+var _selectedBible = 'GAE';
+
+//
 
 class BiblePage extends StatefulWidget {
   const BiblePage({Key? key}) : super(key: key);
@@ -28,9 +36,8 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
   @override
   bool get wantKeepAlive =>true;
 
-  //드랍다운메뉴정의
-  final _items = ['1','2','3'];
-  var _selected = '1';
+  //성경구절(content)을 리스트로 저장
+  List<Map<String, dynamic>> _Contents = [];
 
   //(다음페이지에서 선택된 성서이름 받아오기)
   void _getBible() async{
@@ -39,7 +46,12 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
     setState(() {
       _SelectedBcode = value[0]; // 성서코드 받아오기
       _SelectedBible = value[1]; // 성서이름 받아오기
+      //성서 다시선택했으면 "장"&"절" 초기화
+      _SelectedChapter = 1;
+      _SelectedVerse   = 1;
     });
+    // 성서 선택했으면 구절내용 재검색
+    _getcontent();
   }
   //(다음페이지에서 선택된 "장"&"절" 받아오기)
   void _getPart() async{
@@ -52,24 +64,82 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
       _SelectedChapter = value['ChapterNo'];
       _SelectedVerse   = value['VerseNo'];
     });
-    _getcontent("GAE");
+    // 장&절 선택했으면 구절내용 재검색
+    _getcontent();
   }
-  //(함수) 성경구절(content)가져오는 함수
-  void _getcontent(String vcode ) async {
-    final data = await BibleRepository.GetContent(
-        vcode, _SelectedBcode, _SelectedChapter, _SelectedVerse);
+
+  //(함수) 성경구절(content) 아이디(id)가져오는 함수
+  void _getcontentId() async {
+    //1. 해당 성경구절(content)의 아이디(_id) 가져오기
+    final IDidata = await BibleRepository.GetContentId(
+        _selectedBible, _SelectedBcode, _SelectedChapter, _SelectedVerse);
     setState(() {
-      Content = data[0]['content'];
+      _SelectedId = IDidata[0]['_id'];
+    });
+  }
+
+  //(함수) 조건에 맞는 구절(content) 리스트 가져오기
+  void _getcontent() async {
+    //1. 해당 조건에 맞는 구절 아이디(id) 가져오기
+    final IDidata = await BibleRepository.GetContentId(
+        _selectedBible, _SelectedBcode, _SelectedChapter, _SelectedVerse);
+    setState(() {
+      _SelectedId = IDidata[0]['_id'];
+    });
+    //2. 갯수(_selectedNumber)로부터 가져올 성경구절(content) 갯수 정보 만들기
+    final data = await BibleRepository.GetContent(
+        _selectedBible, _SelectedId, int.parse(_selectedNumber));
+    //3. 상태 업데이트
+    setState(() {
+      _Contents = data;
       _isLoadingContent = false;
     });
-    print(":");
   }
+
+  //(함수)조건에 맞는 성경이름 ( 창세기 / 출애굽기 / 레위기 등등...) 가져오기
+  void UpdateBibleName() async {
+    //1. 해당 조건에 맞는 성경이름 가져오기
+    final data = await BibleRepository.GetBibleName(
+        _selectedBible, _SelectedBcode);
+    //2. 성경이름 업뎃해주기
+    setState(() {_SelectedBible = data[0]['name'];
+    });
+  }
+
+  //(페이지전환) 페이지전환 내용에 맞게 상태 업데이트 ( 기준은 현재 아이디 )
+  void _changePage(String action) async {
+    //1. 페이지전환에 따른 페이지 시작아이디 ( 현재페이지 시작아이디 +or- 갯수 )
+    switch(action){
+      case "previous": _SelectedId = _SelectedId - int.parse(_selectedNumber); break;
+      case "next":     _SelectedId = _SelectedId + int.parse(_selectedNumber); break;
+    }
+    if (_SelectedId >= 1){
+      //2. 아이디에 맞는 성경구절(content) 가져오기 ( 첫번째 행 정보만 사용하므로, 갯수는 1개로 )
+      final data = await BibleRepository.GetContent(
+          _selectedBible, _SelectedId, 1);
+      //3. 상태정보 업데이트
+      setState(() {
+        _SelectedId      = _SelectedId;
+        _SelectedBcode   = data[0]['bcode'];
+        _SelectedChapter = data[0]['cnum'];
+        _SelectedVerse   = data[0]['vnum'];
+      });
+      //4. 성경이름( 창세기/출애굽기 등)이 변경되었을 수도 있으므로 업뎃확인
+      UpdateBibleName();
+      //5. 구절 업뎃
+      _getcontent();
+    }else{
+      _SelectedId = 1; // 계속 마이너스로 내려가는것을 방지하기 위해 1로 초기화해준다.
+      print("이전 페이지가 없습니다.");
+    }
+  }
+
 
   @override
   //(초기화) 페이지 로딩과 동시에 초기화 진행
   void initState() {
     super.initState();
-    _getcontent("GAE");
+    _getcontent();
     //print("페이지 초기화 완료");
     //_getBible();
   }
@@ -120,51 +190,156 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
       ),
       body: Center(child: Column(
         children: [
-          TimerBuilder.periodic(
-            const Duration(seconds: 1),
-            builder: (context) {
-              return Text(
-                formatDate(DateTime.now(), [yy,'.',mm,'.',dd,' ',am,' ',hh, ':', nn]),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white
+          // 현재시간
+          _TimerWidget(),
+          // 선택박스
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [_SelectBibleWidget(), _SelectCountWidget()],
+          ),
+
+          // 성경 구절 시작
+          Flexible(
+            child: Scrollbar(
+              child: ListView.builder(
+                itemCount: _Contents.length,
+                itemBuilder: (context, index) => Container(
+                  padding: EdgeInsets.fromLTRB(30, 15, 30, 5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text("${_Contents[index]['cnum']}장 ${_Contents[index]['vnum']}절", style: TextStyle(color: Colors.grey, fontSize: 10),),
+                      Text("${_Contents[index]['content']}", style: TextStyle(color: Colors.white, fontSize: 17),),
+                    ],
+                  ),
                 ),
-              );
-            },
-          ),
-          DropdownButton(
-            value: _selected,
-              items: _items.map(
-                  (value){
-                    return DropdownMenuItem(
-                        value:value,
-                        child: Text(value)
-                    );
-                  }
-              ).toList(),
-              onChanged: (value){
-                setState(() {
-                  _selected = value as String;
-              });
-            }
-          ),
-          Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: Container(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                  Text("$_SelectedChapter장 $_SelectedVerse절", style: TextStyle(color: Colors.grey, fontSize: 10),),
-                  Text("$Content", style: TextStyle(color: Colors.white, fontSize: 15),),
-              ],
-            )
+              ),
             ),
           ),
+          // (Preview, Next 버튼)위젯
+          Container(
+            height: 50,
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white.withOpacity(0.07),
+                  child: IconButton(
+                    icon: Icon(Icons.chevron_left_outlined, color: Colors.white, size: 20,),
+                    onPressed: (){_changePage("previous");},),),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white.withOpacity(0.07),
+                  child: IconButton(
+                    icon: Icon(Icons.chevron_right_outlined, color: Colors.white, size: 20,),
+                    onPressed: (){_changePage("next");},),)
+              ],
+            )
+          )
         ],
       )
       ),
     );
   }
+
+  ////아래부터 서브위젯(Sub_Widget) 정의/////
+
+  //1. 성경(bible)선택 위젯
+  Widget _SelectBibleWidget(){
+    return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+            decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(10)),
+            child: DropdownButton(
+                dropdownColor: Colors.black87,
+                style: TextStyle(color: Colors.white,
+                  backgroundColor: Colors.transparent,
+                ),
+                value: _selectedBible,
+                icon: Icon(Icons.arrow_drop_down),
+                iconSize: 22,
+                //underline: SizedBox(), // 밑줄이 사라짐
+                items: _Bibleitems.map(
+                        (value){
+                      return DropdownMenuItem(
+                          value:value,
+                          child: Text('$value', style: TextStyle(fontSize: 10, color: Colors.white),)
+                      );
+                    }
+                ).toList(),
+                onChanged: (value){
+                  setState(() {
+                    _selectedBible = value as String;
+                    _getcontent();
+                  });
+                }
+            ),
+          ),
+        ]
+    );
+  }
+
+  //2. 갯수 선택 위젯
+  Widget _SelectCountWidget(){
+    return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(10)),
+            child: DropdownButton(
+                dropdownColor: Colors.black87,
+                style: TextStyle(color: Colors.white,
+                  backgroundColor: Colors.transparent,
+                ),
+                value: _selectedNumber,
+                icon: Icon(Icons.arrow_drop_down),
+                iconSize: 22,
+                //underline: SizedBox(), // 밑줄이 사라짐
+                items: _Numberitems.map(
+                        (value){
+                      return DropdownMenuItem(
+                          value:value,
+                          child: Text('$value 개씩보기', style: TextStyle(fontSize: 10, color: Colors.white),)
+                      );
+                    }
+                ).toList(),
+                onChanged: (value){
+                  setState(() {
+                    _selectedNumber = value as String;
+                    _getcontent();
+                  });
+                }
+            ),
+          ),
+        ]
+    );
+  }
+
+  //3. 시간표시 위젯
+ Widget _TimerWidget(){
+    return TimerBuilder.periodic(
+      const Duration(seconds: 1),
+      builder: (context) {
+        return Text(
+          formatDate(DateTime.now(), [yy,'.',mm,'.',dd,' ',am,' ',hh, ':', nn]),
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: Colors.white
+          ),
+        );
+      },
+    );
+ }
+
 }

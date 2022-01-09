@@ -53,16 +53,42 @@ class BibleRepository {
     );
   }
 
-  // (내용<content> 가져오기)
-  static Future<List<Map<String, dynamic>>> GetContent(String vcode, int bcode, int cnum, int vnum) async {
+  // (성경구절<content> 가져오기 with 갯수정보)
+  static Future<List<Map<String, dynamic>>> GetContent(String vcode, int initID, int number) async {
     var db = await BibleDatabase.getDb();
-    return db.query(
+    var result = db.query(
         "verses",
-        columns: ["content"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
-        where: ' vcode =:vcode and bcode =:bcode and cnum=:cnum and vnum=:vnum', //' vcode ="GAE" and type like "%ld%" ',
-        whereArgs: [vcode, bcode, cnum, vnum],
+        columns: ["bcode","cnum","vnum","content"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+        where: ' vcode =:vcode and _id >=:initID and _id <=:endID', //' vcode ="GAE" and type like "%ld%" ',
+        whereArgs: [vcode, initID, initID+number-1],
     );
+    return result;
   }
+
+  // (가져올구절(content) _Id 가져오기
+  static Future<List<Map<String, dynamic>>> GetContentId(String vcode, int bcode, int cnum, int vnum) async {
+    var db = await BibleDatabase.getDb();
+    var result =  db.query(
+      "verses",
+      columns: ["_id"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+      where: ' vcode =:vcode and bcode =:bcode and cnum=:cnum and vnum=:vnum', //' vcode ="GAE" and type like "%ld%" ',
+      whereArgs: [vcode, bcode, cnum, vnum],
+    );
+    return result;
+  }
+
+  // 조건에 맞는 성경이름 가져오기 ( ex: 창세기 / 출애굽기 / 레위기 / 요한계시록 등등 )
+  static Future<List<Map<String, dynamic>>> GetBibleName(String vcode, int bcode) async {
+    var db = await BibleDatabase.getDb();
+    var result =  db.query(
+      "bibles",
+      columns: ["name"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+      where: ' vcode =:vcode and bcode =:bcode', //' vcode ="GAE" and type like "%ld%" ',
+      whereArgs: [vcode, bcode],
+    );
+    return result;
+  }
+
 
   Future<List<Bible>> searchBibles(String vcode, String query) async {
     var db = await BibleDatabase.getDb();
