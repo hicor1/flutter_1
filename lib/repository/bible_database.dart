@@ -8,6 +8,7 @@ import 'package:sqflite/sqflite.dart';
 // (Global 변수) 메인DB이름 정의
 var MainDBName = "holybible.db"; // holybible.db / hicor.db
 var DB_Dir     = "assets";
+var Version    = 2;
 
 class BibleDatabase {
   // (함수) DB연결
@@ -22,7 +23,7 @@ class BibleDatabase {
 
     return await openDatabase(
       dbPath,
-      version: 2,
+      version: Version,
       singleInstance: true,
       onUpgrade: _handleUpgrade
     );
@@ -31,7 +32,7 @@ class BibleDatabase {
   // (함수) DB상태업그레이드
   static FutureOr<void> _handleUpgrade(Database db, int oldVersion, int newVersion) {
     var batch = db.batch();
-    if (oldVersion < 2 && newVersion >= 2) {
+    if (oldVersion < Version && newVersion >= Version) {
       print('[DB_UPGRADE] ${new DateTime.now()}: upgrade v2');
       batch.execute('update verses set bookmarked=false');
       batch.execute('update hymns set bookmarked=false');

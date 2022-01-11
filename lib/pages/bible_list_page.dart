@@ -17,7 +17,7 @@ class _BibleListPageState extends State<BibleListPage> {
 
   //(함수) 초반에 성서 리스트 전체를 반환하는 함수
   void _refreshBibles() async {
-    final data = await BibleRepository.getItems('Bibles');
+    final data = await BibleRepository.getItems('Bibles', Get.arguments['_selectedBible']);
     setState(() {
       _Bibles = data;
       _isLoading = false;
@@ -75,16 +75,16 @@ class _BibleListPageState extends State<BibleListPage> {
     var Newlist;
     switch (_selectedPageIndex) {
       case 0:
-        Newlist = _Bibles.where((f) => (f['vcode'] == "GAE")).toList();
+        Newlist = _Bibles.where((f) => (f['vcode'] == Get.arguments['_selectedBible'])).toList();
         break;
       case 1:
         Newlist =
-            _Bibles.where((f) => (f['vcode'] == "GAE") && (f['type'] == "old"))
+            _Bibles.where((f) => (f['vcode'] == Get.arguments['_selectedBible']) && (f['type'] == "old"))
                 .toList();
         break;
       case 2:
         Newlist =
-            _Bibles.where((f) => (f['vcode'] == "GAE") && (f['type'] == "new"))
+            _Bibles.where((f) => (f['vcode'] == Get.arguments['_selectedBible']) && (f['type'] == "new"))
                 .toList();
         break;
     }

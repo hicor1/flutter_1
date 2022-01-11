@@ -5,6 +5,7 @@ import 'package:hicor_1/pages/bible_part_list_page.dart';
 import 'package:hicor_1/repository/bible_repository.dart';
 import 'package:date_format/date_format.dart';
 import 'package:timer_builder/timer_builder.dart';
+import 'package:favorite_button/favorite_button.dart';
 
 //(성서이름이 담길공간, "상태저장"기능을 사용학 위해 전역변수로 선언
 String _SelectedBible   = "창세기"; // 성서이름
@@ -12,6 +13,7 @@ int _SelectedBcode      = 1;     // 성서코드
 int _SelectedChapter    = 1; // '장' 번호
 int _SelectedVerse      = 1; // '절' 번호
 int _SelectedId         = 1; // '아이디' 번호\
+int _TempId             = 1; // (임심)'아이디' 번호
 bool _isLoadingContent  = true; //성경구절(content) 로딩 여부를 확인하는 변수
 
 //드랍다운메뉴정의
@@ -19,7 +21,7 @@ final _Numberitems = ['1','2','3','4','5'];
 var _selectedNumber = '1';
 
 final _Bibleitems = ['GAE','NIV'];
-var _selectedBible = 'GAE';
+var _selectedBible = 'GAE'; // 위에 앞글자가 대문자로 쓰여진 "_SelectedBible"와 혼용하여 사용금지!!!
 
 //
 
@@ -41,7 +43,7 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
 
   //(다음페이지에서 선택된 성서이름 받아오기)
   void _getBible() async{
-    var value =  await Get.to(()=>BibleListPage());
+    var value =  await Get.to(()=>BibleListPage(), arguments: {'_selectedBible':_selectedBible});
 
     setState(() {
       _SelectedBcode = value[0]; // 성서코드 받아오기
@@ -50,6 +52,8 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
       _SelectedChapter = 1;
       _SelectedVerse   = 1;
     });
+    //4. 성경이름( 창세기/출애굽기 등)이 변경되었을 수도 있으므로 업뎃확인
+    UpdateBibleName();
     // 성서 선택했으면 구절내용 재검색
     _getcontent();
   }
@@ -110,16 +114,20 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
   void _changePage(String action) async {
     //1. 페이지전환에 따른 페이지 시작아이디 ( 현재페이지 시작아이디 +or- 갯수 )
     switch(action){
-      case "previous": _SelectedId = _SelectedId - int.parse(_selectedNumber); break;
-      case "next":     _SelectedId = _SelectedId + int.parse(_selectedNumber); break;
+      case "previous": _TempId = _SelectedId - int.parse(_selectedNumber); break;
+      case "next":     _TempId = _SelectedId + int.parse(_selectedNumber); break;
     }
-    if (_SelectedId >= 1){
-      //2. 아이디에 맞는 성경구절(content) 가져오기 ( 첫번째 행 정보만 사용하므로, 갯수는 1개로 )
-      final data = await BibleRepository.GetContent(
-          _selectedBible, _SelectedId, 1);
+
+    //2. 아이디에 맞는 성경구절(content) 가져오기 ( 첫번째 행 정보만 사용하므로, 갯수는 1개로 )
+    final data = await BibleRepository.GetContent(
+        _selectedBible, _TempId, 1);
+    //2-1. 마지막 페이지인지 확인
+    if (data.length==0){ // 리턴되는 정보가 없다면 마지막페이지라고 판단
+      print("페이지가 없습니다.");
+    } else { // 정상적으로 다음페이지 정보를 수신했다면, 상태 업데이트
       //3. 상태정보 업데이트
       setState(() {
-        _SelectedId      = _SelectedId;
+        _SelectedId      = _TempId;
         _SelectedBcode   = data[0]['bcode'];
         _SelectedChapter = data[0]['cnum'];
         _SelectedVerse   = data[0]['vnum'];
@@ -128,10 +136,24 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
       UpdateBibleName();
       //5. 구절 업뎃
       _getcontent();
-    }else{
-      _SelectedId = 1; // 계속 마이너스로 내려가는것을 방지하기 위해 1로 초기화해준다.
-      print("이전 페이지가 없습니다.");
     }
+  }
+
+  //(즐겨찾기(북마크))업데이트
+  Future<void> _UpdateBookmarked(int _id, int Currentbookmarked, int index) async {
+    // 임시공간
+    //지역변수 할당
+    int bookmarked;
+    //상태변환 ( 0->1, 1->0 )
+    if (Currentbookmarked==0){
+      bookmarked = 1;
+    }else{
+      bookmarked = 0;
+    }
+    // DB에 덮어쓰기
+    await BibleRepository().UpdateBookmarked(_id, bookmarked);
+    // 상태업데이트
+    _getcontent();
   }
 
 
@@ -151,7 +173,7 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
         centerTitle: true,
         title: Container(
           width: 200,
-          height:35,
+          height:40,
           decoration: BoxDecoration(
             border: Border.all(width: 1, color: Colors.grey),
             borderRadius: BorderRadius.all(Radius.circular(30))
@@ -203,38 +225,64 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
             child: Scrollbar(
               child: ListView.builder(
                 itemCount: _Contents.length,
-                itemBuilder: (context, index) => Container(
-                  padding: EdgeInsets.fromLTRB(30, 15, 30, 5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text("${_Contents[index]['cnum']}장 ${_Contents[index]['vnum']}절", style: TextStyle(color: Colors.grey, fontSize: 10),),
-                      Text("${_Contents[index]['content']}", style: TextStyle(color: Colors.white, fontSize: 17),),
-                    ],
-                  ),
-                ),
+                itemBuilder: (context, index) {
+                  //뿌려줄 변수 정의
+                  int id   = _Contents[index]['_id']; // 선택된 id
+                  int cnum = _Contents[index]['cnum']; // 장 번호
+                  int vnum = _Contents[index]['vnum']; // 절 번호
+                  String content = _Contents[index]['content'];// 구절 내용
+                  int bookmarked = _Contents[index]['bookmarked'];// 북마크내용
+
+                  //위젯 뿌리기
+                  return Container(
+                    padding: EdgeInsets.fromLTRB(30, 15, 30, 5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Row(
+                          children: [
+                            // 좋아요 버튼 삽입
+                            IconButton(
+                              padding: EdgeInsets.zero, // 아이콘 패딩 없애기
+                              constraints: BoxConstraints(), // 아이콘 패딩 없애기
+                              icon : bookmarked == 1? Icon(Icons.favorite) : Icon(Icons.favorite_border),
+                              color: bookmarked== 1? Colors.red : Colors.grey,
+                              onPressed: (){
+                                // 즐겨찾기 버튼 누르면, 즐겨찾기 아이콘 및 DB 및 상태 업뎃
+                                _UpdateBookmarked(id, bookmarked, index);
+                              }),
+                            //null
+                            Text(" $cnum장 $vnum절", style: TextStyle(color: Colors.grey, fontSize: 15),),
+                          ],
+                        ),
+                        Text("$content", style: TextStyle(color: Colors.white, fontSize: 20),),
+                      ],
+                    ),
+                  );
+                }
               ),
             ),
           ),
+          //Divider(height: 0.05, color: Colors.white, thickness: 0.3, indent: 7, endIndent: 7,),
           // (Preview, Next 버튼)위젯
           Container(
-            height: 50,
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
+            height: 60,
+            margin: EdgeInsets.fromLTRB(10, 0, 10, 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white.withOpacity(0.07),
+                  radius: 55,
+                  backgroundColor: Colors.white.withOpacity(0.05),
                   child: IconButton(
-                    icon: Icon(Icons.chevron_left_outlined, color: Colors.white, size: 20,),
+                    icon: Icon(Icons.chevron_left_outlined, color: Colors.white, size: 35,),
                     onPressed: (){_changePage("previous");},),),
                 CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white.withOpacity(0.07),
+                  radius: 55,
+                  backgroundColor: Colors.white.withOpacity(0.05),
                   child: IconButton(
-                    icon: Icon(Icons.chevron_right_outlined, color: Colors.white, size: 20,),
+                    icon: Icon(Icons.chevron_right_outlined, color: Colors.white, size: 35,),
                     onPressed: (){_changePage("next");},),)
               ],
             )
@@ -253,7 +301,7 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+            padding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
             decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(10)),
@@ -264,19 +312,20 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
                 ),
                 value: _selectedBible,
                 icon: Icon(Icons.arrow_drop_down),
-                iconSize: 22,
+                iconSize: 30,
                 //underline: SizedBox(), // 밑줄이 사라짐
                 items: _Bibleitems.map(
                         (value){
                       return DropdownMenuItem(
                           value:value,
-                          child: Text('$value', style: TextStyle(fontSize: 10, color: Colors.white),)
+                          child: Text('$value', style: TextStyle(fontSize: 15, color: Colors.white),)
                       );
                     }
                 ).toList(),
                 onChanged: (value){
                   setState(() {
                     _selectedBible = value as String;
+                    UpdateBibleName();
                     _getcontent();
                   });
                 }
@@ -292,7 +341,7 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
             decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(10)),
@@ -303,13 +352,13 @@ class _BiblePageState extends State<BiblePage> with AutomaticKeepAliveClientMixi
                 ),
                 value: _selectedNumber,
                 icon: Icon(Icons.arrow_drop_down),
-                iconSize: 22,
+                iconSize: 30,
                 //underline: SizedBox(), // 밑줄이 사라짐
                 items: _Numberitems.map(
                         (value){
                       return DropdownMenuItem(
                           value:value,
-                          child: Text('$value 개씩보기', style: TextStyle(fontSize: 10, color: Colors.white),)
+                          child: Text('$value 개씩보기', style: TextStyle(fontSize: 15, color: Colors.white),)
                       );
                     }
                 ).toList(),

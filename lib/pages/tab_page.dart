@@ -3,6 +3,7 @@ import 'package:hicor_1/pages/bible_page.dart';
 import 'package:hicor_1/pages/home_page.dart';
 import 'package:hicor_1/pages/search_page.dart';
 import 'package:hicor_1/pages/my_page.dart';
+import 'package:hicor_1/pages/favorite_page.dart';
 
 class TabPage extends StatefulWidget {
   const TabPage({Key? key}) : super(key: key);
@@ -12,12 +13,12 @@ class TabPage extends StatefulWidget {
 }
 
 class _TabPageState extends State<TabPage> {
-  int _selectedPageIndex = 1;
+  int _selectedPageIndex = 2;
 
   List _pages = [
     HomePage(),
     BiblePage(),
-    Text('Favorite'),
+    FavoritePage(),
     MyPage(),
   ];
 

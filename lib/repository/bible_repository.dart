@@ -18,12 +18,13 @@ class BibleRepository {
   }
 
   // Read all items (journals)
-  static Future<List<Map<String, dynamic>>> getItems(String TableName) async {
+  static Future<List<Map<String, dynamic>>> getItems(String TableName, String vcode) async {
     var db = await BibleDatabase.getDb();
     return db.query(
         TableName,
         columns: ["*"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
-        where: ' vcode ="GAE" ', //' vcode ="GAE" and type like "%ld%" ',
+        where: ' vcode =:vcode ', //' vcode ="GAE" and type like "%ld%" ',
+        whereArgs: [vcode],
         orderBy: "_id"
     );
   }
@@ -58,9 +59,10 @@ class BibleRepository {
     var db = await BibleDatabase.getDb();
     var result = db.query(
         "verses",
-        columns: ["bcode","cnum","vnum","content"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+        columns: ["_id","bcode","cnum","vnum","content","bookmarked"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
         where: ' vcode =:vcode and _id >=:initID and _id <=:endID', //' vcode ="GAE" and type like "%ld%" ',
         whereArgs: [vcode, initID, initID+number-1],
+        orderBy: "_id asc"
     );
     return result;
   }
@@ -85,6 +87,27 @@ class BibleRepository {
       columns: ["name"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
       where: ' vcode =:vcode and bcode =:bcode', //' vcode ="GAE" and type like "%ld%" ',
       whereArgs: [vcode, bcode],
+    );
+    return result;
+  }
+
+  // 북마크(즐겨찾기(bookmarked))업데이트 하기
+  Future<void> UpdateBookmarked(int _id, int bookmarked) async {
+    var db = await BibleDatabase.getDb();
+    await db.rawUpdate(
+        'update verses set bookmarked = ? where _id=:_id',
+        [bookmarked, _id]
+    );
+  }
+
+  // 북마크(즐겨찾기(bookmarked))가져오기
+  static Future<List<Map<String, dynamic>>> GetBookmarked() async {
+    var db = await BibleDatabase.getDb();
+    var result =  db.query(
+      "verses",
+      columns: ["*"], // ['vcode', 'bcode', 'type', 'name', 'chapter_count'],
+      where: ' bookmarked = 1 ', //' vcode ="GAE" and type like "%ld%" ',
+      orderBy: "_id asc"
     );
     return result;
   }
